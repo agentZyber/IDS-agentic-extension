@@ -454,7 +454,7 @@ services
       - local
 
   omejdn-server:
-    image: ghcr.io/fraunhofer-aisec/omejdn-server:${OMEJDN_VERSION}
+    image: idstestbed/omejdn-server:1.6.0
     container_name: omejdn-server
     environment:
       - OMEJDN_ISSUER=${OMEJDN_ISSUER}
@@ -690,7 +690,7 @@ Configure the `docker-compose.yml` file with your configuration. The `docker-com
 services
 
   connectora:
-    image: ghcr.io/international-data-spaces-association/dataspace-connector:8.0.2
+    image: idstestbed/dataspace-connector:8.0.2
     container_name: connectora
     ports:
       - 8080:8080
@@ -932,14 +932,14 @@ Removing connectora          ... done
 Removing network testbed_local
 Removing volume testbed_broker-fuseki
 Removing image nginx:1.21.6
-Removing image ghcr.io/fraunhofer-aisec/omejdn-server:1.6.0
-Removing image ghcr.io/fraunhofer-aisec/omejdn-ui:dev
-Removing image ghcr.io/international-data-spaces-association/dataspace-connector:8.0.2
-Removing image ghcr.io/international-data-spaces-association/dataspace-connector:8.0.2
-WARNING: Image ghcr.io/international-data-spaces-association/dataspace-connector:8.0.2 not found.
-Removing image registry.gitlab.cc-asp.fraunhofer.de/eis-ids/broker-open/reverseproxy
-Removing image idstestbed/broker-core:5.0.3
-Removing image registry.gitlab.cc-asp.fraunhofer.de/eis-ids/broker-open/fuseki
+Removing image idstestbed/omejdn-server:1.6.0
+Removing image idstestbed/omejdn-ui:dev
+Removing image idstestbed/dataspace-connector:8.0.2
+Removing image idstestbed/dataspace-connector:8.0.2
+WARNING: Image idstestbed/dataspace-connector:8.0.2 not found.
+Removing image idstestbed/mdb-reverseproxy:5.0.3
+Removing image idstestbed/mdb-reverseproxy:5.0.3
+Removing image idstestbed/mdb-fuseki:5.0.3
 ```
 
 As seen above, the containers have been stopped and deleted. The network, volumes and images used by the `docker-compose.yml` file have also been deleted.
