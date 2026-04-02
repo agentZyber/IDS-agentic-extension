@@ -1,0 +1,58 @@
+{
+  "@context": {
+    "ids": "https://w3id.org/idsa/core/",
+    "idsc": "https://w3id.org/idsa/code/"
+  },
+  "@type": "ids:ContractAgreement",
+  "@id": "https://connectora:8080/api/agreements/demo-agreement",
+  "ids:provider": {
+    "@id": "https://connector_A"
+  },
+  "ids:consumer": {
+    "@id": "https://connector_B"
+  },
+  "ids:permission": [
+    {
+      "@type": "ids:Permission",
+      "@id": "https://connectora:8080/api/rules/demo-use",
+      "ids:description": [
+        {
+          "@value": "Usage policy provide access applied",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        }
+      ],
+      "ids:title": [
+        {
+          "@value": "Example Usage Policy",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        }
+      ],
+      "ids:assignee": [
+        {
+          "@id": "https://connector_B"
+        }
+      ],
+      "ids:assigner": [
+        {
+          "@id": "https://connector_A"
+        }
+      ],
+      "ids:action": [
+        {
+          "@id": "https://w3id.org/idsa/code/USE"
+        }
+      ],
+      "ids:target": {
+        "@id": "https://connectora:8080/api/artifacts/demo-weather"
+      }
+    }
+  ],
+  "ids:contractStart": {
+    "@value": "2024-05-29T10:51:37.249Z",
+    "@type": "http://www.w3.org/2001/XMLSchema#dateTimeStamp"
+  },
+  "ids:contractEnd": {
+    "@value": "2028-10-22T07:48:37.068Z",
+    "@type": "http://www.w3.org/2001/XMLSchema#dateTimeStamp"
+  }
+}

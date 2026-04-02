@@ -1,0 +1,4 @@
+interface:
+  display_name: "IDS Policy to Tools"
+  short_description: "Map IDS contracts to agent permissions"
+  default_prompt: "Use $ids-policy-to-tools to translate this IDS contract into agent tool permissions."
