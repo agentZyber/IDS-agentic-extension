@@ -114,6 +114,67 @@ def test_cli_wrong_assignee() -> None:
     )
 
 
+def test_cli_acp_envelope() -> None:
+    payload = run_json_command(
+        [
+            "python3",
+            str(SCRIPT_DIR / "ids_policy_to_tools.py"),
+            "--input",
+            str(SKILL_DIR / "references" / "example-acp-run.json"),
+            "--format",
+            "json",
+        ]
+    )
+    summary = payload["summary"]
+    assert_true("ACP" in summary["communication_protocols"], "ACP protocol should be detected.")
+    assert_true(
+        "acp.send_message" in {item["tool"] for item in payload["recommendations"]["allow"]},
+        "ACP envelopes should allow scoped ACP messaging.",
+    )
+
+
+def test_cli_a2a_message_envelope() -> None:
+    payload = run_json_command(
+        [
+            "python3",
+            str(SCRIPT_DIR / "ids_policy_to_tools.py"),
+            "--input",
+            str(SKILL_DIR / "references" / "example-a2a-message-send.json"),
+            "--assignee",
+            "https://connector_B",
+            "--format",
+            "json",
+        ]
+    )
+    summary = payload["summary"]
+    assert_true("A2A" in summary["communication_protocols"], "A2A protocol should be detected.")
+    assert_true(
+        "a2a.send_message" in {item["tool"] for item in payload["recommendations"]["allow"]},
+        "A2A envelopes should allow scoped A2A messaging.",
+    )
+
+
+def test_cli_a2a_agent_card() -> None:
+    payload = run_json_command(
+        [
+            "python3",
+            str(SCRIPT_DIR / "ids_policy_to_tools.py"),
+            "--input",
+            str(SKILL_DIR / "references" / "example-a2a-agent-card.json"),
+            "--format",
+            "json",
+        ]
+    )
+    assert_true(
+        "a2a.read_agent_card" in {item["tool"] for item in payload["recommendations"]["allow"]},
+        "A2A Agent Cards should allow discovery reads.",
+    )
+    assert_true(
+        "a2a.send_message" in {item["tool"] for item in payload["recommendations"]["conditional"]},
+        "A2A Agent Cards should make A2A messaging conditional until policy is present.",
+    )
+
+
 def test_repo_extraction() -> None:
     payload = run_json_command(
         [
@@ -130,6 +191,26 @@ def test_repo_extraction() -> None:
         "ids:ContractAgreement" in kinds,
         "Expected to extract at least one IDS ContractAgreement.",
     )
+
+
+def test_unittest_suite() -> None:
+    result = subprocess.run(
+        [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            str(SKILL_DIR / "tests"),
+            "-p",
+            "test_*.py",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert_true("OK" in result.stdout or "OK" in result.stderr, "Unit test suite did not pass.")
 
 
 def write_mcp_message(process: subprocess.Popen[str], message: dict[str, Any]) -> None:
@@ -255,7 +336,11 @@ def main() -> None:
         ("rule-wrapper CLI", test_cli_rule_wrapper),
         ("agreement CLI", test_cli_agreement),
         ("wrong-assignee CLI", test_cli_wrong_assignee),
+        ("ACP CLI", test_cli_acp_envelope),
+        ("A2A message CLI", test_cli_a2a_message_envelope),
+        ("A2A agent card CLI", test_cli_a2a_agent_card),
         ("repo extraction", test_repo_extraction),
+        ("unit test suite", test_unittest_suite),
         ("MCP server", test_mcp_server),
     ]
 

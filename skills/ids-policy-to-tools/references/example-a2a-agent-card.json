@@ -1,0 +1,35 @@
+{
+  "name": "Governed Data Agent",
+  "description": "An A2A agent that helps negotiate governed data access.",
+  "protocolVersion": "0.3.0",
+  "version": "0.1.0",
+  "url": "http://localhost:4000/a2a/jsonrpc",
+  "skills": [
+    {
+      "id": "policy-chat",
+      "name": "Policy Chat",
+      "description": "Discuss IDS agreements and negotiation steps.",
+      "tags": [
+        "policy",
+        "ids",
+        "negotiation"
+      ]
+    }
+  ],
+  "capabilities": {
+    "pushNotifications": false
+  },
+  "defaultInputModes": [
+    "text",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text"
+  ],
+  "additionalInterfaces": [
+    {
+      "url": "http://localhost:4000/a2a/rest",
+      "transport": "HTTP+JSON"
+    }
+  ]
+}

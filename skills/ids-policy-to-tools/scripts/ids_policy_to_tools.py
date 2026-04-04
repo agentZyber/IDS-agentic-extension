@@ -80,6 +80,18 @@ def looks_like_json(text: str) -> bool:
     )
 
 
+def is_acp_message_part(value: Any) -> bool:
+    return isinstance(value, dict) and (
+        "content_type" in value
+        or "content_url" in value
+        or "content_encoding" in value
+    )
+
+
+def is_a2a_part(value: Any) -> bool:
+    return isinstance(value, dict) and value.get("kind") in {"text", "data", "file"}
+
+
 def as_list(value: Any) -> list[Any]:
     if value is None:
         return []
@@ -164,6 +176,27 @@ def find_type_recursively(node: Any, expected: str) -> bool:
     return found
 
 
+def find_first_value_recursively(node: Any, target_key: str) -> Any:
+    found: Any = None
+
+    def visit(value: Any) -> None:
+        nonlocal found
+        if found is not None:
+            return
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key == target_key:
+                    found = child
+                    return
+                visit(child)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(node)
+    return found
+
+
 def has_nonempty_field(node: dict[str, Any], key: str) -> bool:
     value = node.get(key)
     if value is None:
@@ -228,8 +261,143 @@ def compact_action(action_id: str) -> str:
     return action_id
 
 
+def is_acp_message_like(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and "role" in value
+        and isinstance(value.get("parts"), list)
+        and any(is_acp_message_part(part) for part in value["parts"])
+    )
+
+
+def is_acp_run_like(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and any(key in value for key in ("agent_name", "run_id", "session_id", "status"))
+        and any(key in value for key in ("input", "output"))
+    )
+
+
+def is_a2a_agent_card_like(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and isinstance(value.get("protocolVersion"), str)
+        and isinstance(value.get("url"), str)
+        and isinstance(value.get("skills"), list)
+        and isinstance(value.get("name"), str)
+    )
+
+
+def is_a2a_jsonrpc_like(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and value.get("jsonrpc") == "2.0"
+        and isinstance(value.get("method"), str)
+    )
+
+
+def is_a2a_message_like(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and value.get("kind") == "message"
+        and isinstance(value.get("messageId"), str)
+        and isinstance(value.get("parts"), list)
+        and any(is_a2a_part(part) for part in value["parts"])
+    )
+
+
+def is_a2a_task_like(value: Any) -> bool:
+    return isinstance(value, dict) and (
+        value.get("kind") == "task"
+        or (
+            isinstance(value.get("contextId"), str)
+            and isinstance(value.get("status"), dict)
+            and any(key in value for key in ("history", "artifacts", "id"))
+        )
+    )
+
+
+def collect_communication_context(node: Any) -> dict[str, Any]:
+    protocols: list[str] = []
+    envelopes: list[str] = []
+    methods: list[str] = []
+    roles: list[str] = []
+    endpoints: list[str] = []
+    context_ids: list[str] = []
+    session_ids: list[str] = []
+    run_ids: list[str] = []
+    task_ids: list[str] = []
+    agent_names: list[str] = []
+    message_count = 0
+
+    def add_unique(bucket: list[str], value: str | None) -> None:
+        if value and value not in bucket:
+            bucket.append(value)
+
+    def visit(value: Any) -> None:
+        nonlocal message_count
+        if isinstance(value, dict):
+            if is_acp_run_like(value):
+                add_unique(protocols, "ACP")
+                add_unique(envelopes, "acp-run")
+                add_unique(session_ids, str(value.get("session_id")) if value.get("session_id") else None)
+                add_unique(run_ids, str(value.get("run_id")) if value.get("run_id") else None)
+                add_unique(agent_names, str(value.get("agent_name")) if value.get("agent_name") else None)
+            if is_acp_message_like(value):
+                add_unique(protocols, "ACP")
+                add_unique(envelopes, "acp-message")
+                add_unique(roles, str(value.get("role")) if value.get("role") else None)
+                message_count += 1
+            if is_a2a_agent_card_like(value):
+                add_unique(protocols, "A2A")
+                add_unique(envelopes, "a2a-agent-card")
+                add_unique(endpoints, value.get("url"))
+                add_unique(agent_names, value.get("name"))
+                for interface in as_list(value.get("additionalInterfaces")):
+                    if isinstance(interface, dict):
+                        add_unique(endpoints, interface.get("url"))
+            if is_a2a_jsonrpc_like(value):
+                add_unique(protocols, "A2A")
+                add_unique(envelopes, "a2a-jsonrpc")
+                add_unique(methods, value.get("method"))
+            if is_a2a_message_like(value):
+                add_unique(protocols, "A2A")
+                add_unique(envelopes, "a2a-message")
+                add_unique(roles, str(value.get("role")) if value.get("role") else None)
+                add_unique(context_ids, str(value.get("contextId")) if value.get("contextId") else None)
+                message_count += 1
+            if is_a2a_task_like(value):
+                add_unique(protocols, "A2A")
+                add_unique(envelopes, "a2a-task")
+                add_unique(context_ids, str(value.get("contextId")) if value.get("contextId") else None)
+                add_unique(task_ids, str(value.get("id")) if value.get("id") else None)
+
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(node)
+    return {
+        "protocols": protocols,
+        "envelopes": envelopes,
+        "methods": methods,
+        "roles": roles,
+        "endpoints": endpoints,
+        "context_ids": context_ids,
+        "session_ids": session_ids,
+        "run_ids": run_ids,
+        "task_ids": task_ids,
+        "agent_names": agent_names,
+        "message_count": message_count,
+    }
+
+
 def summarize(source: Any, assignee: str | None, security_profile: str | None, now: datetime) -> dict[str, Any]:
+    source = decode_jsonish(source)
     permissions = extract_permissions(source)
+    communication = collect_communication_context(source)
     actions = unique(
         compact_action(action)
         for permission in permissions
@@ -253,12 +421,8 @@ def summarize(source: Any, assignee: str | None, security_profile: str | None, n
         for target_id in ids_to_strings(permission.get("ids:target"))
     )
 
-    contract_start = parse_datetimeish(
-        source.get("ids:contractStart") if isinstance(source, dict) else None
-    )
-    contract_end = parse_datetimeish(
-        source.get("ids:contractEnd") if isinstance(source, dict) else None
-    )
+    contract_start = parse_datetimeish(find_first_value_recursively(source, "ids:contractStart"))
+    contract_end = parse_datetimeish(find_first_value_recursively(source, "ids:contractEnd"))
     contract_active: bool | None = None
     if contract_start or contract_end:
         lower_ok = contract_start is None or now >= ensure_tz(contract_start)
@@ -267,9 +431,10 @@ def summarize(source: Any, assignee: str | None, security_profile: str | None, n
 
     providers = []
     consumers = []
-    if isinstance(source, dict):
-        providers = ids_to_strings(source.get("ids:provider"))
-        consumers = ids_to_strings(source.get("ids:consumer"))
+    provider_value = find_first_value_recursively(source, "ids:provider")
+    consumer_value = find_first_value_recursively(source, "ids:consumer")
+    providers = ids_to_strings(provider_value)
+    consumers = ids_to_strings(consumer_value)
 
     detected_security_profiles = find_ids_recursively(source, "ids:securityProfile")
     security_profile = security_profile or (detected_security_profiles[0] if detected_security_profiles else None)
@@ -294,7 +459,9 @@ def summarize(source: Any, assignee: str | None, security_profile: str | None, n
 
     if isinstance(source, dict):
         source_types = type_values(source)
-        if not source_types and "value" in source:
+        if not source_types and communication["envelopes"]:
+            source_types = communication["envelopes"]
+        elif not source_types and "value" in source:
             source_types = ["rule-wrapper"]
         elif not source_types and permissions:
             source_types = ["untyped-ids-envelope"]
@@ -324,6 +491,17 @@ def summarize(source: Any, assignee: str | None, security_profile: str | None, n
         "has_prohibitions": has_prohibitions,
         "evaluation_time": now.isoformat(),
         "has_contract_agreement_context": has_contract_agreement_context,
+        "communication_protocols": communication["protocols"],
+        "communication_envelopes": communication["envelopes"],
+        "communication_methods": communication["methods"],
+        "communication_roles": communication["roles"],
+        "communication_endpoints": communication["endpoints"],
+        "communication_context_ids": communication["context_ids"],
+        "communication_session_ids": communication["session_ids"],
+        "communication_run_ids": communication["run_ids"],
+        "communication_task_ids": communication["task_ids"],
+        "communication_agent_names": communication["agent_names"],
+        "communication_message_count": communication["message_count"],
     }
 
 
@@ -341,6 +519,14 @@ def build_recommendations(summary: dict[str, Any]) -> dict[str, Any]:
     conditional: list[dict[str, str]] = []
     deny: list[dict[str, str]] = []
     findings: list[str] = []
+    communication_protocols = summary["communication_protocols"]
+    communication_envelopes = summary["communication_envelopes"]
+    communication_endpoints = summary["communication_endpoints"]
+    communication_methods = summary["communication_methods"]
+    communication_context_ids = summary["communication_context_ids"]
+    communication_session_ids = summary["communication_session_ids"]
+    communication_run_ids = summary["communication_run_ids"]
+    communication_task_ids = summary["communication_task_ids"]
 
     allow.append(
         recommendation(
@@ -391,6 +577,84 @@ def build_recommendations(summary: dict[str, Any]) -> dict[str, Any]:
             "No arbitrary internet fetches.",
         )
     )
+
+    if "ACP" in communication_protocols:
+        scope_bits = communication_session_ids + communication_run_ids
+        scope = (
+            "Only within the current ACP session/run: " + ", ".join(scope_bits)
+            if scope_bits
+            else "Only for the current ACP exchange."
+        )
+        allow.append(
+            recommendation(
+                "acp.send_message",
+                "allow",
+                "ACP Run/Message envelopes were detected, so scoped ACP communication is appropriate for negotiation and status exchange.",
+                scope,
+            )
+        )
+        allow.append(
+            recommendation(
+                "acp.read_run",
+                "allow",
+                "ACP run metadata can be inspected to understand session and execution context.",
+                scope,
+            )
+        )
+
+    if "A2A" in communication_protocols:
+        endpoint_scope = (
+            "Only these A2A endpoints: " + ", ".join(communication_endpoints)
+            if communication_endpoints
+            else "Only within the current A2A conversation context."
+        )
+        if "a2a-agent-card" in communication_envelopes:
+            allow.append(
+                recommendation(
+                    "a2a.read_agent_card",
+                    "allow",
+                    "A2A Agent Cards are discovery artifacts and can be read to inspect capabilities and connection metadata.",
+                    endpoint_scope,
+                )
+            )
+            conditional.append(
+                recommendation(
+                    "a2a.send_message",
+                    "conditional",
+                    "An Agent Card supports discovery and capability negotiation, but governed artifact access still needs explicit IDS policy or agreement.",
+                    endpoint_scope,
+                )
+            )
+            findings.append(
+                "A2A AgentCard detected. Treat it as discovery and capability negotiation only until an IDS policy or agreement is present."
+            )
+        if any(
+            envelope in communication_envelopes
+            for envelope in ("a2a-jsonrpc", "a2a-message", "a2a-task")
+        ):
+            scope_bits = communication_methods + communication_context_ids + communication_task_ids
+            scope = (
+                endpoint_scope + " Context: " + ", ".join(scope_bits)
+                if scope_bits
+                else endpoint_scope
+            )
+            allow.append(
+                recommendation(
+                    "a2a.send_message",
+                    "allow",
+                    "A2A message/task envelopes were detected, so scoped A2A communication is appropriate for negotiation, status exchange, and policy-bound collaboration.",
+                    scope,
+                )
+            )
+        if "a2a-task" in communication_envelopes:
+            conditional.append(
+                recommendation(
+                    "a2a.read_task_artifact",
+                    "conditional",
+                    "A2A task artifacts should be treated like governed outputs and only read when the IDS agreement also permits the corresponding target access.",
+                    endpoint_scope,
+                )
+            )
 
     actions = set(summary["actions"])
     has_use = "USE" in actions
@@ -540,6 +804,28 @@ def render_markdown(summary: dict[str, Any], recommendations: dict[str, Any]) ->
     lines.append(
         f"- Security profile: {summary['security_profile'] or 'not detected'}"
     )
+    lines.append(
+        "- Communication protocols: "
+        + (
+            ", ".join(summary["communication_protocols"])
+            if summary["communication_protocols"]
+            else "none"
+        )
+    )
+    lines.append(
+        "- Communication envelopes: "
+        + (
+            ", ".join(summary["communication_envelopes"])
+            if summary["communication_envelopes"]
+            else "none"
+        )
+    )
+    if summary["communication_methods"]:
+        lines.append("- Communication methods: " + ", ".join(summary["communication_methods"]))
+    if summary["communication_roles"]:
+        lines.append("- Communication roles: " + ", ".join(summary["communication_roles"]))
+    if summary["communication_endpoints"]:
+        lines.append("- Communication endpoints: " + ", ".join(summary["communication_endpoints"]))
     lines.append("")
 
     if recommendations["findings"]:

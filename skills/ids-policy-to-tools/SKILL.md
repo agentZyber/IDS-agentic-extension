@@ -9,7 +9,7 @@ metadata:
 
 ## Overview
 
-Use this skill when the input is an IDS policy artifact, not freeform governance text. It is designed for JSON or JSON-LD shaped like `ids:Permission`, `ids:ContractAgreement`, or a connector rule wrapper whose `value` field contains embedded IDS JSON.
+Use this skill when the input is an IDS policy artifact, not freeform governance text. It is designed for JSON or JSON-LD shaped like `ids:Permission`, `ids:ContractAgreement`, a connector rule wrapper whose `value` field contains embedded IDS JSON, or ACP/A2A communication envelopes carrying those IDS objects.
 
 The skill does two things:
 
@@ -38,6 +38,8 @@ The first version supports these shapes:
 - A top-level `ids:ContractAgreement`
 - A top-level list of permissions
 - A wrapper object with a `value` field that contains serialized IDS JSON
+- ACP `Run` / `Message` style envelopes with IDS JSON in message parts
+- A2A `AgentCard`, JSON-RPC `message/send`, `Message`, and `Task` style envelopes with IDS JSON in message parts
 
 The script can also pull nested `ids:permission` entries out of larger objects. It is intentionally conservative around unsupported IDS features such as rich duties and constraints.
 
@@ -53,6 +55,8 @@ This skill now exposes three practical integration surfaces:
   A lightweight MCP-style stdio server exposing `evaluate_ids_policy` and `extract_repo_ids_examples`.
 
 Use `scripts/run_harness.py` to smoke-test all of them together.
+
+Read [references/architecture.md](./references/architecture.md) for the component and flow architecture of the tool.
 
 ## Workflow
 
@@ -76,6 +80,23 @@ python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py \
 ```
 
 Use `--format json` when the output will feed another script or evaluation pipeline.
+
+ACP example:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py \
+  --input skills/ids-policy-to-tools/references/example-acp-run.json \
+  --format markdown
+```
+
+A2A example:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py \
+  --input skills/ids-policy-to-tools/references/example-a2a-message-send.json \
+  --assignee https://connector_B \
+  --format markdown
+```
 
 If you need repo-derived fixtures instead of hand-crafted examples, extract them first:
 
@@ -116,6 +137,21 @@ The server exposes two tools:
 - `extract_repo_ids_examples`
 
 See [references/integration-patterns.md](./references/integration-patterns.md) for the integration overview.
+See [references/architecture.md](./references/architecture.md) for the full architecture.
+
+## Tests
+
+Run the smoke harness:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/run_harness.py
+```
+
+Run the protocol-focused unit tests:
+
+```bash
+python3 -m unittest discover -s skills/ids-policy-to-tools/tests -p 'test_*.py'
+```
 
 ## Output Expectations
 

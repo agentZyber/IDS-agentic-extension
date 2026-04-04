@@ -2,6 +2,8 @@
 
 This skill now supports three agent-facing entry points.
 
+See [architecture.md](./architecture.md) for the component architecture and data flows behind these entry points.
+
 ## 1. Direct CLI translation
 
 Use the CLI when a human or script already has the IDS object:
@@ -13,6 +15,8 @@ Best for:
 - local review
 - CI checks
 - generating a JSON permission envelope for another tool
+- evaluating ACP message/run envelopes carrying IDS policy
+- evaluating A2A AgentCard or `message/send` envelopes carrying IDS policy
 
 ## 2. Repo extraction
 

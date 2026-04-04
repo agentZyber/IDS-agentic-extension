@@ -25,14 +25,14 @@ def tool_specs() -> list[dict[str, Any]]:
         {
             "name": "evaluate_ids_policy",
             "description": (
-                "Translate an IDS Permission, ContractAgreement, or rule-wrapper payload "
-                "into conservative agent tool recommendations."
+                "Translate an IDS Permission, ContractAgreement, rule-wrapper, ACP envelope, "
+                "or A2A envelope into conservative agent tool recommendations."
             ),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "policy": {
-                        "description": "IDS object or JSON string to evaluate.",
+                        "description": "IDS object, ACP envelope, A2A envelope, or JSON string to evaluate.",
                     },
                     "assignee": {
                         "type": "string",
@@ -93,7 +93,7 @@ def evaluate_policy(arguments: dict[str, Any]) -> dict[str, Any]:
     return {
         "summary": summary,
         "recommendations": recommendations,
-        "note": "Conservative recommendations only; not automatic IDS enforcement.",
+        "note": "Conservative recommendations only; not automatic IDS enforcement. ACP and A2A envelopes are treated as communication context around the IDS policy, not as standalone authority.",
     }
 
 
