@@ -58,6 +58,10 @@ This skill now exposes four practical integration surfaces:
 
 Use `scripts/run_harness.py` to smoke-test all of them together.
 
+For live repo validation of the surrounding IDS stack, testsuite, and broker flow, pair this skill with:
+
+- `../../Testsuite/run_live_connector_suite.sh`
+
 Read [references/architecture.md](./references/architecture.md) for the component and flow architecture of the tool.
 
 ## Workflow
@@ -117,6 +121,12 @@ python3 skills/ids-policy-to-tools/scripts/testbed_agentic_integration.py \
   --format markdown \
   --include-examples \
   --example-limit 5
+```
+
+If you want to validate the live MVDS deployment before or alongside the agentic report, run:
+
+```bash
+sh Testsuite/run_live_connector_suite.sh
 ```
 
 ### 2. Apply The Recommendations Conservatively

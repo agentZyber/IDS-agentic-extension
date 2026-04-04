@@ -913,7 +913,7 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{APPLICANT_CONNECTOR_URL}}{{APPLICANT_CONNECTOR_DESCRIPTION_URL}}?recipient={{BROKER}}&elementId=https://localhost/connectors/",
+									"raw": "{{APPLICANT_CONNECTOR_URL}}{{APPLICANT_CONNECTOR_DESCRIPTION_URL}}?recipient={{BROKER}}&elementId=https://broker-reverseproxy/connectors/",
 									"host": [
 										"{{APPLICANT_CONNECTOR_URL}}{{APPLICANT_CONNECTOR_DESCRIPTION_URL}}"
 									],
@@ -924,7 +924,7 @@
 										},
 										{
 											"key": "elementId",
-											"value": "https://localhost/connectors/"
+											"value": "https://broker-reverseproxy/connectors/"
 										}
 									]
 								}
@@ -1243,9 +1243,8 @@
 										"exec": [
 											"pm.test(\"USC_02-2\", function () {",
 											"    var jsonData = pm.response.json();",
-											"    var consumerAgreementLong = jsonData[\"_links\"][\"self\"][\"href\"];",
-											"    var consumerAgreementId = consumerAgreementLong.replace(\"https://localhost:8080/api/agreements/\", \"\");",
-											"    pm.collectionVariables.set(\"consumerAgreementId\", consumerAgreementId);",
+											"    var consumerAgreementUrl = jsonData[\"_links\"][\"self\"][\"href\"];",
+											"    pm.collectionVariables.set(\"consumerAgreementUrl\", consumerAgreementUrl);",
 											"});"
 										],
 										"type": "text/javascript"
@@ -1327,15 +1326,9 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{CONNECTORA_URL}}/api/agreements/{{consumerAgreementId}}/artifacts",
+									"raw": "{{consumerAgreementUrl}}/artifacts",
 									"host": [
-										"{{CONNECTORA_URL}}"
-									],
-									"path": [
-										"api",
-										"agreements",
-										"{{consumerAgreementId}}",
-										"artifacts"
+										"{{consumerAgreementUrl}}/artifacts"
 									]
 								}
 							},
@@ -2267,11 +2260,7 @@
 			"value": ""
 		},
 		{
-			"key": "consumerAgreementId",
-			"value": ""
-		},
-		{
-			"key": "tesDataLink",
+			"key": "consumerAgreementUrl",
 			"value": ""
 		},
 		{

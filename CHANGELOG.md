@@ -9,9 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Added an end-to-end testbed agentic integration report that connects compose topology, connector configs, testsuite environments, and IDS policy evaluation
 - Added project integration coverage and MCP support for whole-repo inspection
+- Added a repeatable live testsuite helper for deploying the MVDS, registering both connectors with the broker, and running the connector suite end to end
+- Added a community release readiness document for public adopters and maintainers
 
 ### Changed
 - Expanded the IDS policy tooling documentation and README to cover the repo-wide integration flow
+- Updated the testsuite docs and root README to document the public-facing deployment, validation, and agentic entry points
 
 ### Removed
 - none
@@ -20,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - none
 
 ### Fixed
-- none
+- Fixed broker lookup in the connector testsuite to use the broker catalog identifier exposed by the current repo setup
+- Fixed agreement-artifact retrieval in the connector testsuite to use the returned agreement URL instead of a hardcoded provider host
+- Fixed the classic testsuite runner to create the report directory automatically
 
 ### Security
 - none

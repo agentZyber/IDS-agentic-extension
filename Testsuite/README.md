@@ -104,7 +104,33 @@ Currently, it is possible to run tests again an IDS Connector and IDS Broker. Si
 
 `sh execute.sh $COMPONENT`
 
+If the provider connector cannot use the default host port `8080`, you can override the provider base URL for the run without editing the collection:
+
+`CONNECTORA_URL_OVERRIDE=https://localhost:28080 sh execute.sh Connector`
+
 The PDF report can be found in the results folder.
+
+## Live deployment helper
+For a repeatable end-to-end run against the local MVDS deployment, use:
+
+`sh run_live_connector_suite.sh`
+
+This helper:
+- starts the IDS stack with `docker compose`
+- falls back to a manual `connectora` container on `28080` when `8080` is already occupied
+- registers connector A and connector B with the broker before the suite runs
+- executes the Newman connector suite and writes a JSON report under `/tmp/ids-test-results`
+- restores `DAPS/config/users.yml` to its pre-run contents on exit so the worktree stays clean
+
+You can override the provider host port if you do not want the default detection logic:
+
+`CONNECTORA_HOST_PORT=28080 sh run_live_connector_suite.sh`
+
+If you changed the default connector administration credentials, pass them explicitly:
+
+`ADMIN_USERNAME=admin ADMIN_PASSWORD=password sh run_live_connector_suite.sh`
+
+The classic `execute.sh` flow now creates the `results` directory automatically before exporting the HTML report.
 
 ## Covered IDS certification criteria (Connector) for Testbed v1.1
 Last update: **May 30th, 2022**

@@ -70,6 +70,10 @@ flowchart LR
     docker-compose
     connector configs
     testsuite envs"] --> PROJ
+    F["Live Runtime Validation
+    Testsuite helper
+    broker registration
+    connector exchange"] --> PROJ
 ```
 
 ## Main Components
@@ -190,6 +194,22 @@ Responsibilities:
 - Validate protocol support for IDS, ACP, and A2A
 - Ensure CLI and MCP output stay aligned
 
+### 8. Live testsuite integration
+
+Files:
+
+- `../../Testsuite/run_live_connector_suite.sh`
+- `../../Testsuite/execute.sh`
+- `../../Testsuite/Testsuite.postman_collection.json`
+
+Responsibilities:
+
+- Start or reuse the local IDS deployment
+- Register connector A and connector B with the broker
+- Handle the common connector A host-port collision on `8080`
+- Execute the connector validation suite against the live MVDS
+- Provide a practical runtime environment that the agentic integration report can be compared against
+
 ## Runtime Flows
 
 ### Flow A: Direct IDS evaluation
@@ -236,6 +256,25 @@ sequenceDiagram
     CLI->>Norm: Detect A2A + unwrap IDS payload when present
     Norm->>Eval: IDS summary + A2A communication context
     Eval-->>CLI: discovery or scoped messaging guidance
+```
+
+### Flow D: Live repo validation loop
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Helper as run_live_connector_suite.sh
+    participant Stack as IDS Stack
+    participant Broker as Metadata Broker
+    participant Suite as Newman Testsuite
+
+    User->>Helper: Start live validation
+    Helper->>Stack: docker compose up -d core services
+    Helper->>Stack: start or reuse connector A
+    Helper->>Broker: register connector A and connector B
+    Helper->>Suite: run connector tests
+    Suite->>Stack: IDS description, broker, contract, and artifact flow
+    Suite-->>User: pass/fail validation report
 ```
 
 ## Trust Boundaries

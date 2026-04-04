@@ -9,10 +9,17 @@ fi
 
 currentDate=$(date +'%Y-%m-%d_%T')
 purgedCurrentInputFile=$currentDate"_purgedCurrentInputFile.html"
+connectoraArg=()
+
+if [ -n "$CONNECTORA_URL_OVERRIDE" ]; then
+    connectoraArg=(--env-var "CONNECTORA_URL=$CONNECTORA_URL_OVERRIDE")
+fi
 
 echo "Start execution of IDS-Testsuite ..."
 
-newman run "Testsuite.postman_collection.json" --folder $1 -e "env/Applicant_IDS_"$1"_Test_Configuration.postman_environment.json" --insecure -r html --reporter-html-title "IDS Testsuite Report" --reporter-html-export "results/""$currentDate"".html" || exit
+mkdir -p results
+
+newman run "Testsuite.postman_collection.json" --folder $1 -e "env/Applicant_IDS_"$1"_Test_Configuration.postman_environment.json" "${connectoraArg[@]}" --insecure -r html --reporter-html-title "IDS Testsuite Report" --reporter-html-export "results/""$currentDate"".html" || exit
 
 cd results
 currentInputFile=$(ls -Art | tail -n 1)

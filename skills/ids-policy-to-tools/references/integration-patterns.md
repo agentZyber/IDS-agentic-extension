@@ -58,8 +58,21 @@ Exposed tools:
 
 This is a lightweight MCP-style integration surface intended for local experimentation and adapter layers.
 
-## 5. Harness
+## 5. Live MVDS validation
 
-Use the harness to validate that all three entry points still work together:
+Use the repo testsuite helper when you want to validate the running IDS stack around the skill:
+
+- `../../Testsuite/run_live_connector_suite.sh`
+
+Best for:
+
+- bringing up the local MVDS and connector tests in one step
+- handling the common `connectora` host-port conflict on `8080`
+- pre-registering both connectors with the broker before broker-dependent assertions
+- validating that the policy tooling lives next to a working end-to-end IDS exchange
+
+## 6. Harness
+
+Use the harness to validate that the skill entry points still work together:
 
 - `scripts/run_harness.py`

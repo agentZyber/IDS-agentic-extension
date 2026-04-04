@@ -17,7 +17,7 @@ IDS Testbed is a setup with Open Source IDS components which can be used to ve
 
 ## How to get started?
 
-1. Git clone this repository to your local machine and go into the directory (usually ```cd IDS-testbed```) 
+1. Git clone this repository to your local machine and go into the directory (for example `cd <repo-directory>`)
 
 2. Make sure you have correctly installed all the [setting up requirements](https://github.com/International-Data-Spaces-Association/IDS-testbed/blob/master/InstallationGuide.md#target-view-preconfigured-testbed). Run ```docker compose up -d``` to start the Testbed and deploy all the components.
    
@@ -26,6 +26,23 @@ IDS Testbed is a setup with Open Source IDS components which can be used to ve
 4. Test the compatibility of your own developed component following the steps of the [Testbed User Guide](./TestbedUserGuide.md).
 
 5. Download the [Test Suite](https://github.com/International-Data-Spaces-Association/IDS-testbed/tree/master/Testsuite) and follow the instructions to conduct automated tests for your own developed connector
+
+## Community Quick Start
+
+Use the repository in one of these ways:
+
+- Deploy the reference MVDS and validate connector interoperability:
+  - `docker compose up -d`
+  - `sh Testsuite/run_live_connector_suite.sh`
+- Run the classic testsuite flow manually:
+  - `cd Testsuite`
+  - `sh execute.sh Connector`
+- Evaluate IDS policies for agent-safe tool decisions:
+  - `python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py --input skills/ids-policy-to-tools/references/example-contract-agreement.json --format markdown`
+- Inspect the repo as one end-to-end agentic project:
+  - `python3 skills/ids-policy-to-tools/scripts/testbed_agentic_integration.py --format markdown --include-examples --example-limit 5`
+
+See [COMMUNITY-RELEASE-READINESS.md](./COMMUNITY-RELEASE-READINESS.md) for the publish-readiness analysis, validated workflows, public entry points, and current operational assumptions.
 
 ## Agentic IDS Policy Tooling
 
@@ -75,6 +92,16 @@ python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py \
 ```
 
 If your local tooling supports custom skill directories, point it at `skills/ids-policy-to-tools`.
+
+### Repo Integration
+
+For the full community-facing runtime path, combine the reference stack, the broker registration flow, and the connector suite with:
+
+```bash
+sh Testsuite/run_live_connector_suite.sh
+```
+
+This script is intended for local public use of the repository. It handles the common case where host port `8080` is already occupied by falling back to a separate `connectora` container while keeping broker registration and the connector suite aligned with the live deployment.
 
 ### What Changed
 
@@ -137,6 +164,8 @@ More detail is available in:
 - `skills/ids-policy-to-tools/SKILL.md`
 - `skills/ids-policy-to-tools/references/architecture.md`
 - `skills/ids-policy-to-tools/references/integration-patterns.md`
+- `Testsuite/README.md`
+- `COMMUNITY-RELEASE-READINESS.md`
 
 ## Current version (V1.0)
 
