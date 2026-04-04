@@ -11,7 +11,7 @@ Its job is to:
 1. Accept policy-bearing inputs from IDS, ACP, or A2A contexts
 2. Normalize them into a single summary model
 3. Produce conservative recommendations about what an agent may do next
-4. Expose the result through a CLI, an MCP-style server, and repeatable tests
+4. Expose the result through a CLI, a project integration report, an MCP-style server, and repeatable tests
 
 ## High-Level View
 
@@ -50,6 +50,8 @@ flowchart LR
 
     R --> CLI["CLI
     ids_policy_to_tools.py"]
+    R --> PROJ["Project Integration
+    testbed_agentic_integration.py"]
     R --> MCP["MCP-Style Server
     policy_mcp_server.py"]
     R --> TEST["Tests
@@ -61,8 +63,13 @@ flowchart LR
     Postman collections"] --> X["Extractor
     extract_ids_examples.py"]
     X --> CLI
+    X --> PROJ
     X --> MCP
     X --> TEST
+    E["Repo Runtime Context
+    docker-compose
+    connector configs
+    testsuite envs"] --> PROJ
 ```
 
 ## Main Components
@@ -132,12 +139,27 @@ File:
 Responsibilities:
 
 - Scan repo markdown and Postman collections
-- Extract IDS policy objects for fixtures and regression testing
+- Extract IDS policy objects and ACP/A2A envelopes for fixtures and regression testing
 - Feed real-world shapes back into evaluation and tests
 
 This keeps the skill anchored to the actual IDS-testbed flows instead of drifting into synthetic-only logic.
 
-### 5. MCP-style integration layer
+### 5. Project integration layer
+
+File:
+
+- `scripts/testbed_agentic_integration.py`
+
+Responsibilities:
+
+- Read the repo's compose topology and key IDS component surfaces
+- Load connector A and connector B identity and endpoint configuration
+- Compare testsuite environment files against the configured runtime endpoints
+- Evaluate extracted IDS examples with the applicant connector's project context
+
+This layer is the end-to-end bridge from isolated policy reasoning to the repo's actual deployment and testing setup.
+
+### 6. MCP-style integration layer
 
 File:
 
@@ -149,14 +171,17 @@ Responsibilities:
 - Support:
   - `evaluate_ids_policy`
   - `extract_repo_ids_examples`
+  - `inspect_testbed_project`
 
 This layer makes the skill usable by another agent runtime without importing the Python module directly.
 
-### 6. Validation layer
+### 7. Validation layer
 
 Files:
 
 - `scripts/run_harness.py`
+- `tests/test_example_extraction.py`
+- `tests/test_testbed_integration.py`
 - `tests/test_protocol_support.py`
 
 Responsibilities:
@@ -274,10 +299,16 @@ Good next architecture increments:
   Core normalization and recommendation engine
 - `skills/ids-policy-to-tools/scripts/extract_ids_examples.py`
   Repo fixture extractor
+- `skills/ids-policy-to-tools/scripts/testbed_agentic_integration.py`
+  Project-wide integration report
 - `skills/ids-policy-to-tools/scripts/policy_mcp_server.py`
   MCP-style server
 - `skills/ids-policy-to-tools/scripts/run_harness.py`
   End-to-end smoke harness
+- `skills/ids-policy-to-tools/tests/test_example_extraction.py`
+  Extractor regression coverage
+- `skills/ids-policy-to-tools/tests/test_testbed_integration.py`
+  Project integration coverage
 - `skills/ids-policy-to-tools/tests/test_protocol_support.py`
   ACP/A2A-focused unit tests
 

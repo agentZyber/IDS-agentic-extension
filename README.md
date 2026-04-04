@@ -27,6 +27,117 @@ IDS Testbed is a setup with Open Source IDS components which can be used to ve
 
 5. Download the [Test Suite](https://github.com/International-Data-Spaces-Association/IDS-testbed/tree/master/Testsuite) and follow the instructions to conduct automated tests for your own developed connector
 
+## Agentic IDS Policy Tooling
+
+This repository now also includes a repo-local skill at `skills/ids-policy-to-tools` for translating IDS policy artifacts into conservative agent-tool recommendations.
+
+It supports:
+- `ids:Permission`
+- `ids:ContractAgreement`
+- connector rule-wrapper objects with embedded IDS JSON
+- ACP `Run` and `Message` envelopes carrying IDS content
+- A2A `AgentCard`, JSON-RPC `message/send`, `Message`, and `Task` envelopes carrying IDS content
+
+The skill exposes four entry points:
+- `skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py`
+- `skills/ids-policy-to-tools/scripts/extract_ids_examples.py`
+- `skills/ids-policy-to-tools/scripts/testbed_agentic_integration.py`
+- `skills/ids-policy-to-tools/scripts/policy_mcp_server.py`
+
+### Setup
+
+1. Clone the repository and move into it:
+
+```bash
+git clone <your-fork-or-repo-url>
+cd IDS-testbed
+```
+
+2. Make sure `python3` is available:
+
+```bash
+python3 --version
+```
+
+3. Validate the skill end to end:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/run_harness.py
+python3 -m unittest discover -s skills/ids-policy-to-tools/tests -p 'test_*.py'
+```
+
+4. Use the skill directly from the repo:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py \
+  --input skills/ids-policy-to-tools/references/example-rule-wrapper.json \
+  --format markdown
+```
+
+If your local tooling supports custom skill directories, point it at `skills/ids-policy-to-tools`.
+
+### What Changed
+
+The current version can:
+- translate IDS policy objects into `allow`, `conditional`, `deny`, `summary`, and `findings`
+- detect ACP and A2A communication context around IDS payloads
+- classify ACP/A2A fixtures during example extraction
+- inspect the repo's actual compose, connector, and testsuite setup as one end-to-end project report
+- include embedded IDS types plus communication metadata in extracted examples
+- keep dangerous capabilities denied by default unless the agreement context is strong and scoped
+
+### Quick Start
+
+Translate a wrapper or agreement:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py \
+  --input skills/ids-policy-to-tools/references/example-contract-agreement.json \
+  --assignee https://connector_B \
+  --format markdown
+```
+
+Evaluate an ACP or A2A envelope:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py \
+  --input skills/ids-policy-to-tools/references/example-acp-run.json \
+  --format markdown
+
+python3 skills/ids-policy-to-tools/scripts/ids_policy_to_tools.py \
+  --input skills/ids-policy-to-tools/references/example-a2a-message-send.json \
+  --assignee https://connector_B \
+  --format markdown
+```
+
+Extract repo examples, including ACP/A2A envelope classifications when present:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/extract_ids_examples.py \
+  --format markdown \
+  --limit 10
+```
+
+Build the end-to-end project integration report:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/testbed_agentic_integration.py \
+  --format markdown \
+  --include-examples \
+  --example-limit 5
+```
+
+Start the MCP-style stdio server:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/policy_mcp_server.py
+```
+
+More detail is available in:
+- `skills/ids-policy-to-tools/SKILL.md`
+- `skills/ids-policy-to-tools/references/architecture.md`
+- `skills/ids-policy-to-tools/references/integration-patterns.md`
+
 ## Current version (V1.0)
 
 Minimal setup with essential and already available components

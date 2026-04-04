@@ -6,6 +6,7 @@ Smoke-test the IDS policy skill, extractor, and MCP-style server.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,13 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SKILL_DIR = REPO_ROOT / "skills" / "ids-policy-to-tools"
 SCRIPT_DIR = SKILL_DIR / "scripts"
+
+
+def configured_skill_validator() -> Path | None:
+    raw_path = os.environ.get("SKILL_VALIDATOR")
+    if not raw_path:
+        return None
+    return Path(raw_path).expanduser()
 
 
 def run_json_command(args: list[str]) -> Any:
@@ -34,9 +42,10 @@ def assert_true(condition: bool, message: str) -> None:
 
 
 def test_skill_validator() -> None:
-    validator = (
-        Path("/Users/akiskourtis/.codex/skills/.system/skill-creator/scripts/quick_validate.py")
-    )
+    validator = configured_skill_validator()
+    if validator is None:
+        return
+    assert_true(validator.exists(), "Configured SKILL_VALIDATOR does not exist.")
     result = subprocess.run(
         ["python3", str(validator), str(SKILL_DIR)],
         cwd=REPO_ROOT,
@@ -193,6 +202,51 @@ def test_repo_extraction() -> None:
     )
 
 
+def test_protocol_fixture_extraction() -> None:
+    payload = run_json_command(
+        [
+            "python3",
+            str(SCRIPT_DIR / "extract_ids_examples.py"),
+            str((SKILL_DIR / "references" / "example-acp-run.json").relative_to(REPO_ROOT)),
+            str((SKILL_DIR / "references" / "example-a2a-message-send.json").relative_to(REPO_ROOT)),
+            str((SKILL_DIR / "references" / "example-a2a-agent-card.json").relative_to(REPO_ROOT)),
+            "--format",
+            "json",
+        ]
+    )
+    kinds = {item["kind"] for item in payload["examples"]}
+    assert_true("acp-run" in kinds, "Expected ACP run envelopes to be classified.")
+    assert_true("a2a-jsonrpc" in kinds, "Expected A2A JSON-RPC envelopes to be classified.")
+    assert_true("a2a-agent-card" in kinds, "Expected A2A Agent Cards to be classified.")
+
+
+def test_testbed_integration_cli() -> None:
+    payload = run_json_command(
+        [
+            "python3",
+            str(SCRIPT_DIR / "testbed_agentic_integration.py"),
+            "--format",
+            "json",
+            "--include-examples",
+            "--example-limit",
+            "2",
+        ]
+    )
+    connector_ids = {item["connector_id"] for item in payload["project"]["connectors"]}
+    service_names = {item["name"] for item in payload["project"]["compose"]["services"]}
+    assert_true("https://connector_A" in connector_ids, "Connector A should be discovered.")
+    assert_true("https://connector_B" in connector_ids, "Connector B should be discovered.")
+    assert_true("connectorb" in service_names, "Connector B service should be discovered.")
+    assert_true(
+        payload["integration"]["testsuite_alignment"]["check_count"] >= 1,
+        "Expected testsuite alignment checks in the project report.",
+    )
+    assert_true(
+        payload["integration"]["extraction"]["count"] >= 2,
+        "Expected extracted repo examples in the project report.",
+    )
+
+
 def test_unittest_suite() -> None:
     result = subprocess.run(
         [
@@ -274,7 +328,11 @@ def test_mcp_server() -> None:
         tools_response = read_mcp_message(process)
         tool_names = {tool["name"] for tool in tools_response["result"]["tools"]}
         assert_true(
-            "evaluate_ids_policy" in tool_names and "extract_repo_ids_examples" in tool_names,
+            {
+                "evaluate_ids_policy",
+                "extract_repo_ids_examples",
+                "inspect_testbed_project",
+            }.issubset(tool_names),
             "MCP server did not expose the expected tools.",
         )
 
@@ -325,6 +383,32 @@ def test_mcp_server() -> None:
             extract_response["result"]["structuredContent"]["count"] >= 1,
             "MCP extractor should return repo examples.",
         )
+
+        write_mcp_message(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "tools/call",
+                "params": {
+                    "name": "inspect_testbed_project",
+                    "arguments": {
+                        "include_examples": True,
+                        "example_limit": 1,
+                    },
+                },
+            },
+        )
+        project_response = read_mcp_message(process)
+        project_report = project_response["result"]["structuredContent"]
+        assert_true(
+            project_report["integration"]["extraction"]["count"] >= 1,
+            "MCP project inspection should include extracted examples.",
+        )
+        assert_true(
+            len(project_report["project"]["connectors"]) >= 2,
+            "MCP project inspection should include connector profiles.",
+        )
     finally:
         process.terminate()
         process.wait(timeout=5)
@@ -340,6 +424,8 @@ def main() -> None:
         ("A2A message CLI", test_cli_a2a_message_envelope),
         ("A2A agent card CLI", test_cli_a2a_agent_card),
         ("repo extraction", test_repo_extraction),
+        ("protocol fixture extraction", test_protocol_fixture_extraction),
+        ("testbed integration CLI", test_testbed_integration_cli),
         ("unit test suite", test_unittest_suite),
         ("MCP server", test_mcp_server),
     ]

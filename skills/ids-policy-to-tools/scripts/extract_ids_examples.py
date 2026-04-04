@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Extract IDS policy and agreement examples from repo docs and collections.
+Extract IDS policy and protocol-envelope examples from repo docs and collections.
 """
 
 from __future__ import annotations
@@ -12,10 +12,28 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ids_policy_to_tools import decode_jsonish, type_values
+from ids_policy_to_tools import (
+    collect_communication_context,
+    decode_jsonish,
+    is_acp_message_like,
+    is_acp_run_like,
+    is_a2a_agent_card_like,
+    is_a2a_jsonrpc_like,
+    is_a2a_message_like,
+    is_a2a_task_like,
+    type_values,
+)
 
 
 IDS_TYPES = ("ids:Permission", "ids:ContractAgreement")
+PROTOCOL_KINDS = (
+    ("acp-run", is_acp_run_like),
+    ("acp-message", is_acp_message_like),
+    ("a2a-agent-card", is_a2a_agent_card_like),
+    ("a2a-jsonrpc", is_a2a_jsonrpc_like),
+    ("a2a-message", is_a2a_message_like),
+    ("a2a-task", is_a2a_task_like),
+)
 
 
 def repo_root() -> Path:
@@ -33,7 +51,7 @@ def default_paths() -> list[Path]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Extract IDS examples from markdown and JSON files."
+        description="Extract IDS and ACP/A2A protocol examples from markdown and JSON files."
     )
     parser.add_argument(
         "paths",
@@ -62,6 +80,42 @@ def compact_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
+def protocol_kind(node: Any) -> str | None:
+    if not isinstance(node, dict):
+        return None
+    for kind, detector in PROTOCOL_KINDS:
+        if detector(node):
+            return kind
+    return None
+
+
+def embedded_ids_types(node: Any) -> list[str]:
+    found: list[str] = []
+
+    def visit(value: Any) -> None:
+        decoded = decode_jsonish(value)
+        if isinstance(decoded, dict):
+            node_types = type_values(decoded)
+            for ids_type in IDS_TYPES:
+                if ids_type in node_types and ids_type not in found:
+                    found.append(ids_type)
+            for child in decoded.values():
+                visit(child)
+        elif isinstance(decoded, list):
+            for item in decoded:
+                visit(item)
+
+    visit(node)
+    return found
+
+
+def source_label(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(repo_root()))
+    except ValueError:
+        return str(path)
+
+
 def classify_node(node: Any) -> str | None:
     if not isinstance(node, dict):
         return None
@@ -75,7 +129,7 @@ def classify_node(node: Any) -> str | None:
             decoded_types = type_values(decoded)
             if any(ids_type in decoded_types for ids_type in IDS_TYPES):
                 return "rule-wrapper"
-    return None
+    return protocol_kind(node)
 
 
 def extract_from_json_node(
@@ -88,16 +142,28 @@ def extract_from_json_node(
     decoded_node = decode_jsonish(node)
     kind = classify_node(decoded_node)
     if kind is not None:
-        key = (str(source_file), kind, compact_json(decoded_node))
+        canonical_source = str(source_file.resolve())
+        key = (canonical_source, kind, compact_json(decoded_node))
         if key not in seen:
             seen.add(key)
+            communication = collect_communication_context(decoded_node)
+            embedded_types = embedded_ids_types(decoded_node)
+            record: dict[str, Any] = {
+                "source_file": source_label(source_file),
+                "source_path": source_path,
+                "kind": kind,
+                "object": decoded_node,
+            }
+            if communication["protocols"]:
+                record["communication_protocols"] = communication["protocols"]
+            if communication["envelopes"]:
+                record["communication_envelopes"] = communication["envelopes"]
+            if communication["methods"]:
+                record["communication_methods"] = communication["methods"]
+            if kind not in IDS_TYPES and embedded_types:
+                record["embedded_ids_types"] = embedded_types
             records.append(
-                {
-                    "source_file": str(source_file.relative_to(repo_root())),
-                    "source_path": source_path,
-                    "kind": kind,
-                    "object": decoded_node,
-                }
+                record
             )
 
     if isinstance(decoded_node, dict):
@@ -176,7 +242,7 @@ def write_records(records: list[dict[str, Any]], write_dir: Path) -> None:
 
 def render_markdown(records: list[dict[str, Any]]) -> str:
     lines: list[str] = []
-    lines.append("# Extracted IDS Examples")
+    lines.append("# Extracted IDS And Protocol Examples")
     lines.append("")
     lines.append(f"- Count: {len(records)}")
     lines.append("")
@@ -187,6 +253,23 @@ def render_markdown(records: list[dict[str, Any]]) -> str:
         object_types = type_values(record["object"]) if isinstance(record["object"], dict) else []
         if object_types:
             lines.append(f"- Object types: {', '.join(object_types)}")
+        if record.get("embedded_ids_types"):
+            lines.append(f"- Embedded IDS types: {', '.join(record['embedded_ids_types'])}")
+        if record.get("communication_protocols"):
+            lines.append(
+                "- Communication protocols: "
+                + ", ".join(record["communication_protocols"])
+            )
+        if record.get("communication_envelopes"):
+            lines.append(
+                "- Communication envelopes: "
+                + ", ".join(record["communication_envelopes"])
+            )
+        if record.get("communication_methods"):
+            lines.append(
+                "- Communication methods: "
+                + ", ".join(record["communication_methods"])
+            )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 

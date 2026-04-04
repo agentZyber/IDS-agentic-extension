@@ -45,14 +45,16 @@ The script can also pull nested `ids:permission` entries out of larger objects. 
 
 ## Entry Points
 
-This skill now exposes three practical integration surfaces:
+This skill now exposes four practical integration surfaces:
 
 - `scripts/ids_policy_to_tools.py`
   Direct CLI translation of a concrete IDS object into agent-tool recommendations.
 - `scripts/extract_ids_examples.py`
-  Automatic extraction of real IDS policy and agreement payloads from the repo's markdown guides and Postman collections.
+  Automatic extraction of real IDS policy, agreement, and ACP/A2A envelope payloads from the repo's markdown guides and Postman collections.
+- `scripts/testbed_agentic_integration.py`
+  End-to-end project inspection that connects repo examples, compose topology, connector configs, testsuite environments, and evaluated recommendations in one report.
 - `scripts/policy_mcp_server.py`
-  A lightweight MCP-style stdio server exposing `evaluate_ids_policy` and `extract_repo_ids_examples`.
+  A lightweight MCP-style stdio server exposing `evaluate_ids_policy`, `extract_repo_ids_examples`, and `inspect_testbed_project`.
 
 Use `scripts/run_harness.py` to smoke-test all of them together.
 
@@ -106,6 +108,17 @@ python3 skills/ids-policy-to-tools/scripts/extract_ids_examples.py \
   --limit 10
 ```
 
+When ACP or A2A envelopes are present in the scanned files, the extractor now labels those records explicitly and includes their embedded IDS types plus protocol metadata.
+
+If you want the full repo-aware integration instead of just extracted examples, run:
+
+```bash
+python3 skills/ids-policy-to-tools/scripts/testbed_agentic_integration.py \
+  --format markdown \
+  --include-examples \
+  --example-limit 5
+```
+
 ### 2. Apply The Recommendations Conservatively
 
 Treat the script output as a recommended policy envelope, not automatic truth. In this version:
@@ -131,10 +144,11 @@ Start the local stdio server with:
 python3 skills/ids-policy-to-tools/scripts/policy_mcp_server.py
 ```
 
-The server exposes two tools:
+The server exposes three tools:
 
 - `evaluate_ids_policy`
 - `extract_repo_ids_examples`
+- `inspect_testbed_project`
 
 See [references/integration-patterns.md](./references/integration-patterns.md) for the integration overview.
 See [references/architecture.md](./references/architecture.md) for the full architecture.

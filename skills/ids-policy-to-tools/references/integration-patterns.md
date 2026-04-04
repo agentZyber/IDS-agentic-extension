@@ -1,6 +1,6 @@
 # Integration Patterns
 
-This skill now supports three agent-facing entry points.
+This skill now supports four agent-facing entry points.
 
 See [architecture.md](./architecture.md) for the component architecture and data flows behind these entry points.
 
@@ -28,9 +28,23 @@ Best for:
 
 - building eval fixtures from the current repo
 - pulling fresh policy samples after Postman collection changes
+- classifying ACP/A2A transport envelopes around embedded IDS payloads
 - regression testing the mapper against real IDS-testbed flows
 
-## 3. MCP-style server
+## 3. End-to-end project integration
+
+Use the project integration script when you want the policy tooling connected to the real IDS-testbed assets:
+
+- `scripts/testbed_agentic_integration.py`
+
+Best for:
+
+- reading the compose topology as agent context
+- comparing connector configs with testsuite environment files
+- evaluating extracted IDS examples against the configured applicant connector
+- generating one report for the repo's current end-to-end agentic state
+
+## 4. MCP-style server
 
 Use the stdio server when another agent or tool runner wants a tool-shaped interface:
 
@@ -40,10 +54,11 @@ Exposed tools:
 
 - `evaluate_ids_policy`
 - `extract_repo_ids_examples`
+- `inspect_testbed_project`
 
 This is a lightweight MCP-style integration surface intended for local experimentation and adapter layers.
 
-## 4. Harness
+## 5. Harness
 
 Use the harness to validate that all three entry points still work together:
 

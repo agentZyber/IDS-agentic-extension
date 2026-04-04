@@ -12,6 +12,7 @@ from typing import Any
 
 from extract_ids_examples import default_paths, extract_from_paths
 from ids_policy_to_tools import build_recommendations, decode_jsonish, determine_now, summarize
+from testbed_agentic_integration import build_project_report
 
 
 SERVER_INFO = {
@@ -53,8 +54,8 @@ def tool_specs() -> list[dict[str, Any]]:
         {
             "name": "extract_repo_ids_examples",
             "description": (
-                "Extract IDS Permission and ContractAgreement examples from the repo's docs "
-                "and Postman collections."
+                "Extract IDS Permission, ContractAgreement, and ACP/A2A envelope examples "
+                "from the repo's docs and Postman collections."
             ),
             "inputSchema": {
                 "type": "object",
@@ -71,6 +72,39 @@ def tool_specs() -> list[dict[str, Any]]:
                     "include_objects": {
                         "type": "boolean",
                         "description": "Include full extracted objects in the result.",
+                    },
+                },
+            },
+        },
+        {
+            "name": "inspect_testbed_project",
+            "description": (
+                "Build an end-to-end report for this IDS testbed repo by combining compose "
+                "topology, connector configs, testsuite alignment, extracted examples, and "
+                "evaluated policy recommendations."
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "assignee": {
+                        "type": "string",
+                        "description": "Optional principal under test override.",
+                    },
+                    "security_profile": {
+                        "type": "string",
+                        "description": "Optional security profile override.",
+                    },
+                    "now": {
+                        "type": "string",
+                        "description": "ISO 8601 evaluation time override.",
+                    },
+                    "include_examples": {
+                        "type": "boolean",
+                        "description": "Include per-example evaluation snapshots.",
+                    },
+                    "example_limit": {
+                        "type": "integer",
+                        "description": "Maximum number of example snapshots to return.",
                     },
                 },
             },
@@ -126,11 +160,28 @@ def extract_repo_examples(arguments: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def inspect_testbed_project(arguments: dict[str, Any]) -> dict[str, Any]:
+    now = determine_now(arguments.get("now"))
+    include_examples = bool(arguments.get("include_examples"))
+    example_limit = arguments.get("example_limit")
+    if not isinstance(example_limit, int):
+        example_limit = None
+    return build_project_report(
+        assignee=arguments.get("assignee"),
+        security_profile=arguments.get("security_profile"),
+        now=now,
+        include_examples=include_examples,
+        example_limit=example_limit,
+    )
+
+
 def tool_call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     if name == "evaluate_ids_policy":
         return evaluate_policy(arguments)
     if name == "extract_repo_ids_examples":
         return extract_repo_examples(arguments)
+    if name == "inspect_testbed_project":
+        return inspect_testbed_project(arguments)
     raise ValueError(f"Unknown tool: {name}")
 
 

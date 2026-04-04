@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- none 
+- Added an end-to-end testbed agentic integration report that connects compose topology, connector configs, testsuite environments, and IDS policy evaluation
+- Added project integration coverage and MCP support for whole-repo inspection
 
 ### Changed
-- none
+- Expanded the IDS policy tooling documentation and README to cover the repo-wide integration flow
 
 ### Removed
 - none
